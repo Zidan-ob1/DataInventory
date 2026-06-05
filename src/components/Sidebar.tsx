@@ -50,7 +50,7 @@ export default function Sidebar() {
             <i className="fa-solid fa-store"></i>
           </div>
           <div>
-            <div className="brand-name">TokoInventory</div>
+            <div className="brand-name">Berkah Jaya</div>
             <div className="brand-sub">Toko Bangunan</div>
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function Sidebar() {
         >
           <i className="fa-solid fa-arrow-right-from-bracket"></i> Logout
         </button>
-        <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '12px', textAlign: 'center' }}>v1.0.0 &mdash; TokoInventory PRD</div>
+        
       </div>
     </aside>
   );

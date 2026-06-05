@@ -5,8 +5,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import ToastContainer from '@/components/Toast';
 
 export const metadata: Metadata = {
-  title: 'TokoInventory — Sistem Inventory Toko Bangunan',
-  description: 'Sistem Inventory Toko Bangunan',
+  title: 'Berkah Jaya — Material Bangunan',
 };
 
 export default function RootLayout({

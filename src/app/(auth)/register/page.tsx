@@ -52,8 +52,8 @@ export default function RegisterPage() {
         <div className="brand-icon" style={{ margin: '0 auto 12px', width: '48px', height: '48px', fontSize: '24px' }}>
           <i className="fa-solid fa-store"></i>
         </div>
-        <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text)' }}>Daftar TokoInventory</h1>
-        <p style={{ fontSize: '13px', color: 'var(--text3)', marginTop: '4px' }}>Buat akun baru untuk mulai menggunakan sistem</p>
+        <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text)' }}>Daftar Admin Berkah Jaya</h1>
+        <p style={{ fontSize: '13px', color: 'var(--text3)', marginTop: '4px' }}>Buat akun untuk mengakses</p>
       </div>
 
       <form onSubmit={handleRegister}>

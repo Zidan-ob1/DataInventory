@@ -8,12 +8,6 @@ export default function LaporanStok() {
 
   const fmt = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 
-  const stokBadge = (b: Barang) => {
-    if (b.stok === 0) return <span className="badge badge-red">Habis</span>;
-    if (b.stok <= b.minstok) return <span className="badge badge-amber">Menipis</span>;
-    return <span className="badge badge-green">Normal</span>;
-  };
-
   const handlePrint = () => {
     window.print();
   };
@@ -38,7 +32,6 @@ export default function LaporanStok() {
               <th>Harga Beli</th>
               <th>Harga Jual</th>
               <th>Nilai Stok</th>
-              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -53,12 +46,11 @@ export default function LaporanStok() {
                   <td>{fmt(b.hbeli)}</td>
                   <td>{fmt(b.hjual)}</td>
                   <td><strong>{fmt(b.stok * b.hbeli)}</strong></td>
-                  <td>{stokBadge(b)}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={9}>
+                <td colSpan={8}>
                   <div className="empty">
                     <i className="fa-solid fa-chart-bar"></i>
                     <p>Belum ada data laporan stok</p>

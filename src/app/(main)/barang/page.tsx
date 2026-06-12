@@ -59,12 +59,6 @@ export default function MasterBarang() {
     }
   };
 
-  const stokBadge = (b: Barang) => {
-    if (b.stok === 0) return <span className="badge badge-red">Habis</span>;
-    if (b.stok <= b.minstok) return <span className="badge badge-amber">Menipis</span>;
-    return <span className="badge badge-green">Normal</span>;
-  };
-
   return (
     <div className="card">
       <div className="card-header">
@@ -95,7 +89,6 @@ export default function MasterBarang() {
               <th>Harga Jual</th>
               <th>Stok</th>
               <th>Min. Stok</th>
-              <th>Status</th>
               <th></th>
             </tr>
           </thead>
@@ -113,7 +106,6 @@ export default function MasterBarang() {
                   <td>{fmt(b.hjual)}</td>
                   <td><strong>{b.stok}</strong></td>
                   <td style={{ color: 'var(--text3)' }}>{b.minstok}</td>
-                  <td>{stokBadge(b)}</td>
                   <td>
                     <button className="btn btn-icon btn-danger" onClick={() => handleDelete(b.id)} title="Hapus">
                       <i className="fa-solid fa-trash-can"></i>
@@ -123,7 +115,7 @@ export default function MasterBarang() {
               ))
             ) : (
               <tr>
-                <td colSpan={9}>
+                <td colSpan={8}>
                   <div className="empty">
                     <i className="fa-solid fa-boxes-stacked"></i>
                     <p>Belum ada data barang</p>
@@ -150,7 +142,7 @@ export default function MasterBarang() {
               <option>Keramik & Granit</option>
               <option>Pipa & Sanitasi</option>
               <option>Kayu & Triplek</option>
-              <option>Lain-lain</option>
+              <option>Lain-Lain</option>
             </select>
           </div>
           <div className="form-group">

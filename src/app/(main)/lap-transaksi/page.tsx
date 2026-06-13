@@ -31,21 +31,7 @@ export default function LaporanTransaksi() {
 
   return (
     <>
-      <div className="lap-stats">
-        <StatCard 
-          icon="" iconBg="transparent" iconColor="transparent"
-          label="Total Nilai Pembelian" value={fmt(totalBeli)} sub="seluruh periode"
-        />
-        <StatCard 
-          icon="" iconBg="transparent" iconColor="transparent"
-          label="Total Nilai Penjualan" value={fmt(totalJual)} sub="seluruh periode"
-        />
-        <StatCard 
-          icon="" iconBg="transparent" iconColor="transparent"
-          label="Estimasi Laba Kotor" value={fmt(laba)} sub="penjualan - HPP"
-          valueColor="var(--green)"
-        />
-      </div>
+      
       <div className="card">
         <div className="card-header">
           <span className="card-title">Rekap Semua Transaksi</span>

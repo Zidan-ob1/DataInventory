@@ -10,8 +10,8 @@ const pageTitles: Record<string, string> = {
   '/pelanggan': 'Master Pelanggan',
   '/pembelian': 'Transaksi Pembelian',
   '/penjualan': 'Transaksi Penjualan',
-  '/adjustment': 'Adjustment Stok',
   '/lap-stock': 'Laporan Stok',
+  '/lap-stock/adjustment': 'Adjustment Stok',
   '/lap-transaksi': 'Laporan Transaksi',
   '/lap-supplier': 'Laporan Supplier',
 };

@@ -29,7 +29,6 @@ export default function Sidebar() {
       items: [
         { name: 'Pembelian', path: '/pembelian', icon: 'fa-cart-shopping' },
         { name: 'Penjualan', path: '/penjualan', icon: 'fa-receipt' },
-        { name: 'Adjustment', path: '/adjustment', icon: 'fa-sliders' },
       ],
     },
     {

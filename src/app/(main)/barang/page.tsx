@@ -10,16 +10,12 @@ export default function MasterBarang() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form State
+  // Form State (Diperbarui: Menghapus hbeli, hjual, stok. Menambahkan keterangan)
   const [nama, setNama] = useState('');
-  const [kategori, setKategori] = useState('Semen & Bahan Dasar');
+  const [kategori, setKategori] = useState('Semen & Bahan Dasar'); // Berfungsi sebagai "Kelompok"
   const [satuan, setSatuan] = useState('Sak');
-  const [hbeli, setHbeli] = useState('');
-  const [hjual, setHjual] = useState('');
-  const [stok, setStok] = useState('');
   const [minstok, setMinstok] = useState('');
-
-  const fmt = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const [keterangan, setKeterangan] = useState(''); // State Baru
 
   const filteredBarang = barang.filter(b => 
     b.nama.toLowerCase().includes(search.toLowerCase()) || 
@@ -36,18 +32,23 @@ export default function MasterBarang() {
     const newBarang: Barang = {
       id: genId('B'),
       nama,
-      kategori,
+      kategori, // Kelompok
       satuan,
-      hbeli: Number(hbeli) || 0,
-      hjual: Number(hjual) || 0,
-      stok: Number(stok) || 0,
-      minstok: Number(minstok) || 0
+      minstok: Number(minstok) || 0,
+      // Pastikan property ini didukung oleh tipe 'Barang' di StoreContext Anda:
+      keterangan, 
+      // Jika StoreContext Anda wajib menerima nilai harga/stok, isi dengan nilai default (0):
+      hbeli: 0,
+      hjual: 0,
+      stok: 0
     };
 
     addBarang(newBarang);
     
     // Reset form
-    setNama(''); setHbeli(''); setHjual(''); setStok(''); setMinstok('');
+    setNama(''); 
+    setMinstok('');
+    setKeterangan('');
     setIsModalOpen(false);
     toast('✓ Barang berhasil ditambahkan');
   };
@@ -84,11 +85,10 @@ export default function MasterBarang() {
             <tr>
               <th>Kode</th>
               <th>Nama Barang</th>
+              <th>Kelompok</th> 
               <th>Satuan</th>
-              <th>Harga Beli</th>
-              <th>Harga Jual</th>
-              <th>Stok</th>
               <th>Min. Stok</th>
+              <th>Keterangan Tambahan</th> 
               <th></th>
             </tr>
           </thead>
@@ -97,15 +97,11 @@ export default function MasterBarang() {
               filteredBarang.map(b => (
                 <tr key={b.id}>
                   <td className="mono">{b.id}</td>
-                  <td>
-                    <strong>{b.nama}</strong><br/>
-                    <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{b.kategori}</span>
-                  </td>
+                  <td><strong>{b.nama}</strong></td>
+                  <td><span className="badge">{b.kategori}</span></td>
                   <td>{b.satuan}</td>
-                  <td>{fmt(b.hbeli)}</td>
-                  <td>{fmt(b.hjual)}</td>
-                  <td><strong>{b.stok}</strong></td>
                   <td style={{ color: 'var(--text3)' }}>{b.minstok}</td>
+                  <td>{b.keterangan || '-'}</td> {/* Menampilkan keterangan */}
                   <td>
                     <button className="btn btn-icon btn-danger" onClick={() => handleDelete(b.id)} title="Hapus">
                       <i className="fa-solid fa-trash-can"></i>
@@ -115,7 +111,7 @@ export default function MasterBarang() {
               ))
             ) : (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={7}> {/* Sesuaikan colspan dari 8 menjadi 7 */}
                   <div className="empty">
                     <i className="fa-solid fa-boxes-stacked"></i>
                     <p>Belum ada data barang</p>
@@ -134,7 +130,7 @@ export default function MasterBarang() {
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Kategori</label>
+            <label className="form-label">Kelompok (Kategori)</label>
             <select className="input" value={kategori} onChange={e => setKategori(e.target.value)}>
               <option>Semen & Bahan Dasar</option>
               <option>Besi & Baja</option>
@@ -153,27 +149,27 @@ export default function MasterBarang() {
             </select>
           </div>
         </div>
+
         <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Harga Beli (Rp)</label>
-            <input className="input" type="number" placeholder="50000" min="0" value={hbeli} onChange={e => setHbeli(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Harga Jual (Rp)</label>
-            <input className="input" type="number" placeholder="65000" min="0" value={hjual} onChange={e => setHjual(e.target.value)} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Stok Awal</label>
-            <input className="input" type="number" placeholder="0" min="0" value={stok} onChange={e => setStok(e.target.value)} />
-          </div>
           <div className="form-group">
             <label className="form-label">Minimum Stok Alert</label>
             <input className="input" type="number" placeholder="10" min="0" value={minstok} onChange={e => setMinstok(e.target.value)} />
-            <div className="form-info">Notifikasi jika stok di bawah angka ini</div>
           </div>
         </div>
+
+        {/* Form Baru: Keterangan Tambahan */}
+        <div className="form-group">
+          <label className="form-label">Keterangan Tambahan</label>
+          <textarea 
+            className="input" 
+            placeholder="Masukkan keterangan atau catatan tambahan mengenai barang..." 
+            rows={3} 
+            value={keterangan} 
+            onChange={e => setKeterangan(e.target.value)}
+            style={{ resize: 'vertical', fontFamily: 'inherit', padding: '8px' }}
+          />
+        </div>
+
         <div className="modal-footer">
           <button className="btn" onClick={() => setIsModalOpen(false)}>Batal</button>
           <button className="btn btn-primary" onClick={handleTambah}><i className="fa-solid fa-floppy-disk"></i> Simpan</button>

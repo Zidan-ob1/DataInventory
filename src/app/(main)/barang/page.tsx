@@ -6,7 +6,7 @@ import Modal from '@/components/Modal';
 import { toast } from '@/components/Toast';
 
 export default function MasterBarang() {
-  const { barang, genId, addBarang, deleteBarang } = useStore();
+  const { barang, genId, addBarang, deleteBarang, updateBarang } = useStore();
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -16,6 +16,7 @@ export default function MasterBarang() {
   const [satuan, setSatuan] = useState('Sak');
   const [minstok, setMinstok] = useState('');
   const [keterangan, setKeterangan] = useState(''); // State Baru
+  const [editId, setEditId] = useState<string | null>(null);
 
   const filteredBarang = barang.filter(b => 
     b.nama.toLowerCase().includes(search.toLowerCase()) || 
@@ -23,34 +24,67 @@ export default function MasterBarang() {
     b.kategori.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleTambah = () => {
-    if (!nama.trim()) {
-      toast('Nama barang wajib diisi!', true);
-      return;
-    }
+ // Ganti dari handleTambah ke handleSimpan
+const handleSimpan = () => {
+  if (!nama.trim()) {
+    toast('Nama barang wajib diisi!', true);
+    return;
+  }
+  
+  if (editId) {
+    // --- MODE EDIT / UPDATE ---
+    const updatedBarang: Barang = {
+      id: editId,
+      nama,
+      kategori,
+      satuan,
+      minstok: Number(minstok) || 0,
+      keterangan,
+      hbeli: 0,
+      hjual: 0,
+      stok: 0
+    };
+
+    // Panggil fungsi update dari context Anda
+    // Jika di context tidak ada fungsi update, ganti baris bawah ini dengan: 
+    // deleteBarang(editId); addBarang(updatedBarang);
+    updateBarang(updatedBarang); 
     
+    toast('✓ Barang berhasil diperbarui');
+  } else {
+    // --- MODE TAMBAH BARU ---
     const newBarang: Barang = {
       id: genId('B'),
       nama,
-      kategori, // Kelompok
+      kategori,
       satuan,
       minstok: Number(minstok) || 0,
-      // Pastikan property ini didukung oleh tipe 'Barang' di StoreContext Anda:
-      keterangan, 
-      // Jika StoreContext Anda wajib menerima nilai harga/stok, isi dengan nilai default (0):
+      keterangan,
       hbeli: 0,
       hjual: 0,
       stok: 0
     };
 
     addBarang(newBarang);
-    
-    // Reset form
-    setNama(''); 
-    setMinstok('');
-    setKeterangan('');
-    setIsModalOpen(false);
     toast('✓ Barang berhasil ditambahkan');
+  }
+  
+  // Reset form & tutup modal
+  setNama(''); 
+  setMinstok('');
+  setKeterangan('');
+  setEditId(null); // Reset editId kembali ke null
+  setIsModalOpen(false);
+};
+
+  const handleEditClick = (b: Barang) => {
+    setEditId(b.id); // Set editId untuk menandai bahwa kita sedang dalam mode edit
+    setNama(b.nama);
+    setKategori(b.kategori);
+    setSatuan(b.satuan);
+    setMinstok(b.minstok ? String(b.minstok) : '');
+    setKeterangan(b.keterangan || '');
+    setIsModalOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -58,6 +92,15 @@ export default function MasterBarang() {
       deleteBarang(id);
       toast('✓ Barang berhasil dihapus');
     }
+  };
+
+  const resetForm = () => {
+    setNama('');
+    setKategori('Semen & Bahan Dasar');
+    setSatuan('Sak');
+    setMinstok('');
+    setKeterangan('');
+    setEditId(null);
   };
 
   return (
@@ -74,7 +117,7 @@ export default function MasterBarang() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setIsModalOpen(true)}>
+          <button className="btn btn-primary btn-sm" onClick={() => { resetForm(); setIsModalOpen(true); }}>
             <i className="fa-solid fa-plus"></i> Tambah Barang
           </button>
         </div>
@@ -101,8 +144,11 @@ export default function MasterBarang() {
                   <td><span className="badge">{b.kategori}</span></td>
                   <td>{b.satuan}</td>
                   <td style={{ color: 'var(--text3)' }}>{b.minstok}</td>
-                  <td>{b.keterangan || '-'}</td> {/* Menampilkan keterangan */}
+                  <td>{b.keterangan || '-'}</td> 
                   <td>
+                    <button className="btn btn-icon btn-primary" onClick={() => handleEditClick(b)} title="Edit">
+                      <i className="fa-solid fa-pen-to-square"></i>
+                    </button>
                     <button className="btn btn-icon btn-danger" onClick={() => handleDelete(b.id)} title="Hapus">
                       <i className="fa-solid fa-trash-can"></i>
                     </button>
@@ -111,7 +157,7 @@ export default function MasterBarang() {
               ))
             ) : (
               <tr>
-                <td colSpan={7}> {/* Sesuaikan colspan dari 8 menjadi 7 */}
+                <td colSpan={7}> 
                   <div className="empty">
                     <i className="fa-solid fa-boxes-stacked"></i>
                     <p>Belum ada data barang</p>
@@ -123,7 +169,11 @@ export default function MasterBarang() {
         </table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Tambah Barang">
+      <Modal 
+      isOpen={isModalOpen} 
+      onClose={() => { resetForm(); setIsModalOpen(false); }} 
+      title={editId ? "Edit Barang" : "Tambah Barang"}
+      >
         <div className="form-group">
           <label className="form-label">Nama Barang <span style={{ color: 'red' }}>*</span></label>
           <input className="input" placeholder="Contoh: Semen Portland 50kg" value={nama} onChange={e => setNama(e.target.value)} />
@@ -171,8 +221,8 @@ export default function MasterBarang() {
         </div>
 
         <div className="modal-footer">
-          <button className="btn" onClick={() => setIsModalOpen(false)}>Batal</button>
-          <button className="btn btn-primary" onClick={handleTambah}><i className="fa-solid fa-floppy-disk"></i> Simpan</button>
+          <button className="btn" onClick={() => { setIsModalOpen(false); setEditId(null); }} >Batal</button>
+          <button className="btn btn-primary" onClick={handleSimpan}><i className="fa-solid fa-floppy-disk"></i> Simpan</button>
         </div>
       </Modal>
     </div>

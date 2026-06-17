@@ -12,6 +12,7 @@ export interface Barang {
   hjual: number;
   stok: number;
   minstok: number;
+  keterangan?: string; 
 }
 
 export interface Supplier {
@@ -77,6 +78,7 @@ interface StoreState {
 interface StoreContextType extends StoreState {
   addBarang: (barang: Barang) => void;
   deleteBarang: (id: string) => void;
+  updateBarang: (barang: Barang) => void;
   addSupplier: (supplier: Supplier) => void;
   deleteSupplier: (id: string) => void;
   addPelanggan: (pelanggan: Pelanggan) => void;
@@ -125,6 +127,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<StoreState>(initialState);
   const [counters, setCounters] = useState({ B: 6, S: 3, P: 3, PB: 3, FK: 3, ADJ: 0 });
 
+
+
   const genId = (prefix: 'B' | 'S' | 'P' | 'PB' | 'FK' | 'ADJ') => {
     const nextNum = counters[prefix] + 1;
     setCounters(prev => ({ ...prev, [prefix]: nextNum }));
@@ -133,6 +137,12 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
   const addBarang = (barang: Barang) => setState(prev => ({ ...prev, barang: [...prev.barang, barang] }));
   const deleteBarang = (id: string) => setState(prev => ({ ...prev, barang: prev.barang.filter(b => b.id !== id) }));
+  const updateBarang = (barangBaru: Barang) => {
+  setState(prev => ({
+    ...prev,
+    barang: prev.barang.map(b => b.id === barangBaru.id ? barangBaru : b)
+  }));
+};
   
   const addSupplier = (supplier: Supplier) => setState(prev => ({ ...prev, supplier: [...prev.supplier, supplier] }));
   const deleteSupplier = (id: string) => setState(prev => ({ ...prev, supplier: prev.supplier.filter(s => s.id !== id) }));
@@ -173,7 +183,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   return (
     <StoreContext.Provider value={{
       ...state,
-      addBarang, deleteBarang,
+      addBarang, deleteBarang, updateBarang,
       addSupplier, deleteSupplier,
       addPelanggan, deletePelanggan,
       addPembelian, addPenjualan, addAdjustment,

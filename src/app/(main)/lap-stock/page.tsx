@@ -1,12 +1,9 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useStore, Barang } from '@/context/StoreContext';
+import { useStore } from '@/context/StoreContext';
 
 export default function LaporanStok() {
-  const pathname = usePathname();
   const { barang } = useStore();
 
   const fmt = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
@@ -17,63 +14,60 @@ export default function LaporanStok() {
 
   return (
     <>
-      <div className="subnav">
-        <Link href="/lap-stock" className={`subnav-link ${pathname === '/lap-stock' ? 'active' : ''}`}>
-          Laporan Stok
-        </Link>
-        <Link href="/lap-stock/adjustment" className={`subnav-link ${pathname === '/lap-stock/adjustment' ? 'active' : ''}`}>
-          Adjustment Stok
-        </Link>
-      </div>
       <div className="card">
         <div className="card-header">
-          <span className="card-title">Laporan Stok Barang</span>
+          <span className="card-title">Laporan Stok Barang (Read-Only)</span>
           <button className="btn btn-sm" onClick={handlePrint}>
-            <i className="fa-solid fa-print"></i> Cetak
+            <i className="fa-solid fa-print"></i> Cetak Laporan
           </button>
         </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Nama Barang</th>
-              <th>Satuan</th>
-              <th>Stok</th>
-              <th>Min. Stok</th>
-              <th>Harga Beli</th>
-              <th>Harga Jual</th>
-              <th>Nilai Stok</th>
-            </tr>
-          </thead>
-          <tbody>
-            {barang.length > 0 ? (
-              barang.map(b => (
-                <tr key={b.id}>
-                  <td className="mono">{b.id}</td>
-                  <td><strong>{b.nama}</strong></td>
-                  <td>{b.satuan}</td>
-                  <td><strong>{b.stok}</strong></td>
-                  <td>{b.minstok}</td>
-                  <td>{fmt(b.hbeli)}</td>
-                  <td>{fmt(b.hjual)}</td>
-                  <td><strong>{fmt(b.stok * b.hbeli)}</strong></td>
-                </tr>
-              ))
-            ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={8}>
-                  <div className="empty">
-                    <i className="fa-solid fa-chart-bar"></i>
-                    <p>Belum ada data laporan stok</p>
-                  </div>
-                </td>
+                <th>Kode</th>
+                <th>Nama Barang</th>
+                <th>Satuan</th>
+                <th>Stok Aktual</th>
+                <th>Min. Stok Alert</th>
+                <th>Harga Beli Akhir</th>
+                <th>Harga Jual Toko</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {barang.length > 0 ? (
+                barang.map(b => (
+                  <tr key={b.id}>
+                    <td className="mono">{b.id}</td>
+                    <td><strong>{b.nama}</strong></td>
+                    <td>{b.satuan}</td>
+                    <td>
+                      <span style={{ 
+                        color: b.stok <= b.minstok ? 'var(--red)' : 'inherit', 
+                        fontWeight: b.stok <= b.minstok ? 'bold' : 'normal' 
+                      }}>
+                        {b.stok} {b.stok <= b.minstok ? ' ' : ''}
+                      </span>
+                    </td>
+                    <td>{b.minstok}</td>
+                    <td>{fmt(b.hbeli)}</td>
+                    <td>{fmt(b.hjual)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="empty">
+                      <i className="fa-solid fa-chart-bar"></i>
+                      <p>Belum ada data laporan stok</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
     </>
   );
 }

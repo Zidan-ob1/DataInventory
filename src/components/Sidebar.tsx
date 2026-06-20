@@ -22,6 +22,7 @@ export default function Sidebar() {
         { name: 'Barang', path: '/barang', icon: 'fa-boxes-stacked' },
         { name: 'Supplier', path: '/supplier', icon: 'fa-truck' },
         { name: 'Pelanggan', path: '/pelanggan', icon: 'fa-users' },
+        
       ],
     },
     {
@@ -29,6 +30,7 @@ export default function Sidebar() {
       items: [
         { name: 'Pembelian', path: '/pembelian', icon: 'fa-cart-shopping' },
         { name: 'Penjualan', path: '/penjualan', icon: 'fa-receipt' },
+        { name: 'Adjustment', path: '/adjustment', icon: 'fa-arrows-up-down' },
       ],
     },
     {

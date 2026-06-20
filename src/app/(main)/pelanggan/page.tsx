@@ -6,37 +6,54 @@ import Modal from '@/components/Modal';
 import { toast } from '@/components/Toast';
 
 export default function MasterPelanggan() {
-  const { pelanggan, penjualan, genId, addPelanggan, deletePelanggan } = useStore();
+  const { pelanggan, genId, addPelanggan, deletePelanggan, updatePelanggan } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form State
-  const [nama, setNama] = useState('');
+  // Form State (Sesuai Revisi Baru)
+  const [namaPelanggan, setNamaPelanggan] = useState('');
   const [telp, setTelp] = useState('');
-  const [tipe, setTipe] = useState('Umum');
-  const [alamat, setAlamat] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [alamatPelanggan, setAlamatPelanggan] = useState('');
+  const [alamatPengiriman, setAlamatPengiriman] = useState('');
+  const [editId, setEditId] = useState<string | null>(null);
 
-  const fmt = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const handleEditClick = (p: Pelanggan) => {
+    setEditId(p.id);
+    setNamaPelanggan(p.namaPelanggan);
+    setTelp(p.telp);
+    setContactPerson(p.contactPerson || '');
+    setAlamatPelanggan(p.alamatPelanggan);
+    setAlamatPengiriman(p.alamatPengiriman || '');
+    setIsModalOpen(true);
+  };
 
-  const handleTambah = () => {
-    if (!nama.trim()) {
+  const handleSimpan = () => {
+    if (!namaPelanggan.trim()) {
       toast('Nama pelanggan wajib diisi!', true);
       return;
     }
     
-    const newPelanggan: Pelanggan = {
-      id: genId('P'),
-      nama,
+    const dataPelanggan: Pelanggan = {
+      id: editId || genId('P'),
+      namaPelanggan,
       telp,
-      tipe,
-      alamat
+      contactPerson,
+      alamatPelanggan,
+      alamatPengiriman
     };
 
-    addPelanggan(newPelanggan);
+    if (editId) {
+      updatePelanggan(dataPelanggan);
+      toast('✓ Pelanggan berhasil diperbarui');
+    } else {
+      addPelanggan(dataPelanggan);
+      toast('✓ Pelanggan berhasil ditambahkan');
+    }
     
     // Reset form
-    setNama(''); setTelp(''); setTipe('Umum'); setAlamat('');
+    setNamaPelanggan(''); setTelp(''); setContactPerson(''); setAlamatPelanggan(''); setAlamatPengiriman('');
+    setEditId(null);
     setIsModalOpen(false);
-    toast('✓ Pelanggan berhasil ditambahkan');
   };
 
   const handleDelete = (id: string) => {
@@ -46,21 +63,11 @@ export default function MasterPelanggan() {
     }
   };
 
-  const getTipeBadge = (t: string) => {
-    const badgeMap: Record<string, string> = {
-      Umum: 'badge-gray',
-      Kontraktor: 'badge-blue',
-      Reseller: 'badge-green',
-      Proyek: 'badge-amber'
-    };
-    return badgeMap[t] || 'badge-gray';
-  };
-
   return (
     <div className="card">
       <div className="card-header">
         <span className="card-title">Daftar Pelanggan</span>
-        <button className="btn btn-primary btn-sm" onClick={() => setIsModalOpen(true)}>
+        <button className="btn btn-primary btn-sm" onClick={() => { setEditId(null); setIsModalOpen(true); }}>
           <i className="fa-solid fa-plus"></i> Tambah Pelanggan
         </button>
       </div>
@@ -69,34 +76,34 @@ export default function MasterPelanggan() {
           <thead>
             <tr>
               <th>Kode</th>
-              <th>Nama</th>
+              <th>Nama Pelanggan</th>
+              <th>Contact Person</th>
               <th>Telepon</th>
-              <th>Tipe</th>
-              <th>Alamat</th>
-              <th>Total Pembelian</th>
-              <th></th>
+              <th>Alamat Pelanggan</th>
+              <th>Alamat Pengiriman</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {pelanggan.length > 0 ? (
-              pelanggan.map(p => {
-                const total = penjualan.filter(j => j.pelangganId === p.id).reduce((a, j) => a + j.qty * j.harga, 0);
-                return (
-                  <tr key={p.id}>
-                    <td className="mono">{p.id}</td>
-                    <td><strong>{p.nama}</strong></td>
-                    <td>{p.telp || '-'}</td>
-                    <td><span className={`badge ${getTipeBadge(p.tipe)}`}>{p.tipe}</span></td>
-                    <td style={{ color: 'var(--text2)', fontSize: '12px' }}>{p.alamat || '-'}</td>
-                    <td><strong>{fmt(total)}</strong></td>
-                    <td>
-                      <button className="btn btn-icon btn-danger" onClick={() => handleDelete(p.id)} title="Hapus">
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              pelanggan.map(p => (
+                <tr key={p.id}>
+                  <td className="mono">{p.id}</td>
+                  <td><strong>{p.namaPelanggan}</strong></td>
+                  <td>{p.contactPerson || '-'}</td>
+                  <td>{p.telp || '-'}</td>
+                  <td style={{ color: 'var(--text2)', fontSize: '12px' }}>{p.alamatPelanggan || '-'}</td>
+                  <td style={{ color: 'var(--text2)', fontSize: '12px' }}>{p.alamatPengiriman || '-'}</td>
+                  <td>
+                    <button className="btn btn-icon btn-primary" onClick={() => handleEditClick(p)} title="Edit" style={{ marginRight: '6px' }}>
+                      <i className="fa-solid fa-edit"></i>
+                    </button>
+                    <button className="btn btn-icon btn-danger" onClick={() => handleDelete(p.id)} title="Hapus">
+                      <i className="fa-solid fa-trash-can"></i>
+                    </button>
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
                 <td colSpan={7}>
@@ -111,33 +118,32 @@ export default function MasterPelanggan() {
         </table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Tambah Pelanggan">
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditId(null); }} title={editId ? "Edit Pelanggan" : "Tambah Pelanggan"}>
         <div className="form-group">
           <label className="form-label">Nama Pelanggan <span style={{ color: 'red' }}>*</span></label>
-          <input className="input" placeholder="Contoh: Budi Santoso" value={nama} onChange={e => setNama(e.target.value)} />
+          <input className="input" placeholder="Contoh: Toko Bangun Sejahtera" value={namaPelanggan} onChange={e => setNamaPelanggan(e.target.value)} />
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Telepon</label>
-            <input className="input" placeholder="08xxx" value={telp} onChange={e => setTelp(e.target.value)} />
+            <label className="form-label">Contact Person</label>
+            <input className="input" placeholder="Nama PIC Kontak" value={contactPerson} onChange={e => setContactPerson(e.target.value)} />
           </div>
           <div className="form-group">
-            <label className="form-label">Tipe Pelanggan</label>
-            <select className="input" value={tipe} onChange={e => setTipe(e.target.value)}>
-              <option>Umum</option>
-              <option>Kontraktor</option>
-              <option>Reseller</option>
-              <option>Proyek</option>
-            </select>
+            <label className="form-label">Telepon / HP</label>
+            <input className="input" placeholder="08xxx" value={telp} onChange={e => setTelp(e.target.value)} />
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label">Alamat</label>
-          <input className="input" placeholder="Jl. Raya No. 5, Jakarta" value={alamat} onChange={e => setAlamat(e.target.value)} />
+          <label className="form-label">Alamat Pelanggan</label>
+          <input className="input" placeholder="Alamat Terdaftar" value={alamatPelanggan} onChange={e => setAlamatPelanggan(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Alamat Pengiriman Logistik</label>
+          <input className="input" placeholder="Alamat Proyek / Lokasi Kirim" value={alamatPengiriman} onChange={e => setAlamatPengiriman(e.target.value)} />
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={() => setIsModalOpen(false)}>Batal</button>
-          <button className="btn btn-primary" onClick={handleTambah}><i className="fa-solid fa-floppy-disk"></i> Simpan</button>
+          <button className="btn" onClick={() => { setIsModalOpen(false); setEditId(null); }}>Batal</button>
+          <button className="btn btn-primary" onClick={handleSimpan}><i className="fa-solid fa-floppy-disk"></i> Simpan</button>
         </div>
       </Modal>
     </div>

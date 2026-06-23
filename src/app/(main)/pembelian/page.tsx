@@ -1,108 +1,96 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useStore, Pembelian, DetailTransaksi } from '@/context/StoreContext';
+import React, { useState } from 'react';
+import { useStore, Pembelian } from '@/context/StoreContext';
 import Modal from '@/components/Modal';
-import { toast } from '@/components/Toast';
 
 export default function TransaksiPembelian() {
-  const { pembelian, supplier, barang, genId, addPembelian } = useStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Form Master State
-  const [tgl, setTgl] = useState('');
-  const [supplierId, setSupplierId] = useState('');
+  const { pembelian } = useStore();
   
-  // Form Detail Item Temp State
-  const [selectedBarangId, setSelectedBarangId] = useState('');
-  const [qty, setQty] = useState('');
-  const [harga, setHarga] = useState('');
-  const [itemsList, setItemsList] = useState<DetailTransaksi[]>([]);
+  // State untuk mengontrol Pop-up Rincian
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedNota, setSelectedNota] = useState<Pembelian | null>(null);
 
   const fmt = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
 
-  useEffect(() => {
-    setTgl(new Date().toISOString().slice(0, 10));
-    if (supplier.length > 0) setSupplierId(supplier[0].id);
-    if (barang.length > 0) {
-      setSelectedBarangId(barang[0].id);
-      setHarga(barang[0].hbeli.toString());
-    }
-  }, [supplier, barang]);
-
-  const handleBarangChange = (id: string) => {
-    setSelectedBarangId(id);
-    const b = barang.find(x => x.id === id);
-    if (b) setHarga(b.hbeli.toString());
+  // Fungsi untuk memicu kemunculan pop-up detail nota
+  const handleBukaRincian = (nota: Pembelian) => {
+    setSelectedNota(nota);
+    setIsModalOpen(true);
   };
 
-  const handleTambahBarisBarang = () => {
-    const q = Number(qty);
-    const h = Number(harga);
-    if (!q || q < 1) { toast('Quantity minimal 1!', true); return; }
-    if (!h || h < 0) { toast('Harga tidak valid!', true); return; }
-
-    const b = barang.find(x => x.id === selectedBarangId);
-    if (!b) return;
-
-    // Cek jika item sudah ada di list keranjang temp
-    if (itemsList.some(item => item.barangId === selectedBarangId)) {
-      toast('Barang ini sudah masuk rincian!', true);
-      return;
-    }
-
-    const newItem: DetailTransaksi = {
-      barangId: b.id,
-      kodeBarang: b.id,
-      namaBarang: b.nama,
-      qty: q,
-      hargaSatuan: h,
-      subtotal: q * h
-    };
-
-    setItemsList(prev => [...prev, newItem]);
-    setQty('');
-  };
-
-  const handleHapusBaris = (index: number) => {
-    setItemsList(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const grandTotal = itemsList.reduce((acc, curr) => acc + curr.subtotal, 0);
-
-  const handleSimpanNota = () => {
-    if (itemsList.length === 0) {
-      toast('Rincian nota barang masih kosong!', true);
-      return;
-    }
-
-    const s = supplier.find(x => x.id === supplierId);
-    if (!s) return;
-
-    const newPembelian: Pembelian = {
-      id: genId('PB'),
-      tgl,
-      supplierId,
-      supplierNama: s.nama,
-      detail: itemsList,
-      totalPembelian: grandTotal,
-      status: 'Selesai'
-    };
-
-    addPembelian(newPembelian);
-    setItemsList([]);
-    setIsModalOpen(false);
-    toast(`✓ Nota Pembelian ${newPembelian.id} berhasil disimpan.`);
+  // Fungsi untuk cetak nota yang ada di dalam pop-up
+  const handleCetakNota = (pj: Pembelian) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    let htmlContent = `
+      <html>
+      <head>
+        <title>Cetak Nota Pembelian ${pj.id}</title>
+        <style>
+          body { font-family: monospace; padding: 20px; color: #000; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border-bottom: 1px solid #000; padding: 6px 4px; text-align: left; font-size: 13px; }
+          .text-right { text-align: right; }
+          hr { border: none; border-top: 1px dashed #000; margin: 15px 0; }
+          .header { text-align: center; margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h3 style="margin: 0; padding: 0;">NOTA MASUK (PEMBELIAN)</h3>
+          <p style="margin: 4px 0 0 0; font-size: 12px;">InvManager System</p>
+        </div>
+        <p>
+          <b>No. Nota  :</b> ${pj.id}<br/>
+          <b>Tanggal   :</b> ${pj.tgl}<br/>
+          <b>Supplier  :</b> ${pj.supplierNama}
+        </p>
+        <hr/>
+        <table>
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Nama Barang</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Harga</th>
+              <th class="text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pj.detail.map(d => `
+              <tr>
+                <td>${d.kodeBarang}</td>
+                <td>${d.namaBarang}</td>
+                <td class="text-right">${d.qty}</td>
+                <td class="text-right">${d.hargaSatuan.toLocaleString('id-ID')}</td>
+                <td class="text-right">${d.subtotal.toLocaleString('id-ID')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <hr/>
+        <h3 class="text-right" style="margin-top: 10px;">Total Pembelian: Rp ${pj.totalPembelian.toLocaleString('id-ID')}</h3>
+        <p style="text-align: center; margin-top: 40px; font-size: 11px;">-- Dokumen Sah Penerimaan Barang Gudang --</p>
+        <script>
+          window.print();
+          window.close();
+        </script>
+      </body>
+      </html>
+    `;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title">Transaksi Pembelian (Nota Masuk)</span>
-        <button className="btn btn-primary btn-sm" onClick={() => { setItemsList([]); setIsModalOpen(true); }}>
-          <i className="fa-solid fa-plus"></i> Buat Pembelian Baru
-        </button>
+        <span className="card-title">Riwayat Transaksi Pembelian (Automated)</span>
+        {/* 🛠️ REVISI: Tombol "Buat Pembelian" dihapus total sesuai instruksi client */}
       </div>
+      
       <div className="table-wrap">
         <table>
           <thead>
@@ -110,9 +98,10 @@ export default function TransaksiPembelian() {
               <th>No. Nota</th>
               <th>Tanggal</th>
               <th>Supplier</th>
-              <th>Jumlah Item</th>
+              <th>Jumlah Variasi</th>
               <th>Total Pembelian</th>
-              <th>Status</th>
+              
+              <th style={{ textAlign: 'center' }}>Rincian</th>
             </tr>
           </thead>
           <tbody>
@@ -121,18 +110,28 @@ export default function TransaksiPembelian() {
                 <tr key={p.id}>
                   <td className="mono">{p.id}</td>
                   <td>{p.tgl}</td>
-                  <td>{p.supplierNama}</td>
-                  <td>{p.detail.length} Macam</td>
+                  <td><strong>{p.supplierNama}</strong></td>
+                  <td>{p.detail.length} Item</td>
                   <td><strong>{fmt(p.totalPembelian)}</strong></td>
-                  <td><span className="badge badge-green">{p.status}</span></td>
+                  
+                  <td style={{ textAlign: 'center' }}>
+                    {/* 🛠️ REVISI: Tombol "👁️ Lihat Detail" di ujung kolom */}
+                    <button 
+                      className="btn btn-icon btn-primary btn-sm" 
+                      onClick={() => handleBukaRincian(p)}
+                      title="Lihat Rincian Nota"
+                    >
+                      <i className="fa-solid fa-eye"></i>
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <div className="empty">
                     <i className="fa-solid fa-cart-shopping"></i>
-                    <p>Belum ada data transaksi pembelian</p>
+                    <p>Belum ada data limpahan transaksi pembelian dari Master</p>
                   </div>
                 </td>
               </tr>
@@ -141,79 +140,66 @@ export default function TransaksiPembelian() {
         </table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Buat Nota Transaksi Pembelian">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Tanggal Nota</label>
-            <input className="input" type="date" value={tgl} onChange={e => setTgl(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Supplier Pengirim</label>
-            <select className="input" value={supplierId} onChange={e => setSupplierId(e.target.value)}>
-              {supplier.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div style={{ border: '1px dashed var(--border)', padding: '12px', borderRadius: 'var(--radius-sm)', margin: '14px 0' }}>
-          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text1)' }}>Input Perincian Item Barang</span>
-          <div className="form-group" style={{ marginTop: '8px' }}>
-            <select className="input" value={selectedBarangId} onChange={e => handleBarangChange(e.target.value)}>
-              {barang.map(b => <option key={b.id} value={b.id}>{b.nama}</option>)}
-            </select>
-          </div>
-          <div className="form-row" style={{ marginTop: '8px' }}>
-            <div className="form-group">
-              <input className="input" type="number" placeholder="Qty" value={qty} onChange={e => setQty(e.target.value)} />
+      {/* ==================== POP-UP MODAL RINCIAN NOTA ==================== */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setSelectedNota(null); }} 
+        title={`Rincian Nota Pembelian - ${selectedNota?.id}`}
+      >
+        {selectedNota && (
+          <>
+            <div style={{ marginBottom: '14px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div><span style={{ color: 'var(--text2)' }}>Tanggal Nota:</span> <strong>{selectedNota.tgl}</strong></div>
+              <div><span style={{ color: 'var(--text2)' }}>Nama Supplier:</span> <strong>{selectedNota.supplierNama}</strong></div>
             </div>
-            <div className="form-group">
-              <input className="input" type="number" placeholder="Harga Satuan" value={harga} onChange={e => setHarga(e.target.value)} />
+
+            <div className="table-wrap" style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '16px' }}>
+              <table style={{ fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Kode</th>
+                    <th>Nama Barang</th>
+                    <th style={{ textAlign: 'right' }}>Qty</th>
+                    <th style={{ textAlign: 'right' }}>Harga Satuan</th>
+                    <th style={{ textAlign: 'right' }}>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedNota.detail.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="mono">{item.kodeBarang}</td>
+                      <td><strong>{item.namaBarang}</strong></td>
+                      <td style={{ textAlign: 'right' }}>{item.qty}</td>
+                      <td style={{ textAlign: 'right' }}>{fmt(item.hargaSatuan)}</td>
+                      <td style={{ textAlign: 'right' }}>{fmt(item.subtotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <button className="btn btn-primary" type="button" onClick={handleTambahBarisBarang}>
-              <i className="fa-solid fa-plus"></i> Masuk Nota
-            </button>
-          </div>
-        </div>
 
-        <div className="table-wrap" style={{ maxHeight: '180px', overflowY: 'auto', marginBottom: '12px' }}>
-          <table style={{ fontSize: '12px' }}>
-            <thead>
-              <tr>
-                <th>Barang</th>
-                <th>Qty</th>
-                <th>Harga</th>
-                <th>Subtotal</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {itemsList.map((item, index) => (
-                <tr key={index}>
-                  <td>{item.namaBarang}</td>
-                  <td>{item.qty}</td>
-                  <td>{fmt(item.hargaSatuan)}</td>
-                  <td>{fmt(item.subtotal)}</td>
-                  <td>
-                    <button className="btn btn-icon btn-danger btn-xs" onClick={() => handleHapusBaris(index)}>
-                      <i className="fa-solid fa-times"></i>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {itemsList.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text3)' }}>Belum ada rincian barang</td></tr>}
-            </tbody>
-          </table>
-        </div>
+            <div style={{ 
+              background: 'var(--surface2)', 
+              borderRadius: 'var(--radius-sm)', 
+              padding: '12px 14px', 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '14px'
+            }}>
+              <span style={{ color: 'var(--text2)', fontSize: '13px' }}>Grand Total Keseluruhan:</span>
+              <strong style={{ fontSize: '16px', color: 'var(--text1)' }}>{fmt(selectedNota.totalPembelian)}</strong>
+            </div>
 
-        <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ color: 'var(--text2)' }}>Grand Total Nota:</span>
-          <strong>{fmt(grandTotal)}</strong>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn" type="button" onClick={() => setIsModalOpen(false)}>Batal</button>
-          <button className="btn btn-primary" type="button" onClick={handleSimpanNota}><i className="fa-solid fa-save"></i> Simpan Faktur</button>
-        </div>
+            <div className="modal-footer">
+              <button className="btn" type="button" onClick={() => { setIsModalOpen(false); setSelectedNota(null); }}>Tutup</button>
+              {/* 🛠️ REVISI: Pilihan cetak berada di dalam pop-up tampilan rincian */}
+              <button className="btn btn-primary" type="button" onClick={() => handleCetakNota(selectedNota)}>
+                <i className="fa-solid fa-print"></i> Cetak / Print Nota
+              </button>
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );

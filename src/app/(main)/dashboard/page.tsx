@@ -58,18 +58,34 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allTransactions.map(t => (
-                    <tr key={t.id}>
-                      <td>{t.tgl}</td>
-                      <td>
-                        <span className={`badge ${t.type === 'Beli' ? 'badge-blue' : 'badge-green'}`}>
-                          {t.type}
-                        </span>
-                      </td>
-                      <td>{t.barang}</td>
-                      <td>{t.qty}</td>
-                    </tr>
-                  ))}
+                  {allTransactions.map(t => {
+                    // Ambil item pertama dari detail transaksi jika ada
+                    const itemPertama = t.detail?.[0];
+                    const sisaItem = t.detail && t.detail.length > 1 ? ` (+${t.detail.length - 1})` : '';
+                    
+                    // Menghitung total seluruh qty barang dalam satu nota
+                    const totalQty = t.detail?.reduce((acc, curr) => acc + curr.qty, 0) || 0;
+
+                    return (
+                      <tr key={t.id}>
+                        <td>{t.tgl}</td>
+                        <td>
+                          <span className={`badge ${t.type === 'Beli' ? 'badge-blue' : 'badge-green'}`}>
+                            {t.type}
+                          </span>
+                        </td>
+                        {/* 🛠️ DIUBAH: Menampilkan nama barang dari array detail secara aman */}
+                        <td>
+                          <strong>{itemPertama ? itemPertama.namaBarang : 'Tidak ada data barang'}</strong>
+                          <span style={{ fontSize: '11px', color: 'var(--text2)', display: 'block' }}>
+                            {sisaItem ? `${sisaItem} item lain` : ''}
+                          </span>
+                        </td>
+                        {/* 🛠️ DIUBAH: Menampilkan akumulasi total Qty dari seluruh item di nota */}
+                        <td>{totalQty} {itemPertama?.namaBarang ? t.detail?.[0]?.kodeBarang?.startsWith('B') ? '' : '' : ''}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (

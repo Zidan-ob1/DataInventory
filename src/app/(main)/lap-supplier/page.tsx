@@ -36,14 +36,23 @@ export default function LaporanSupplier() {
             {supplier.length > 0 ? (
               supplier.map(s => {
                 const sPurchases = pembelian.filter(p => p.supplierId === s.id);
-                const total = sPurchases.reduce((a, p) => a + p.qty * p.harga, 0);
+                
+                {/* 🛠️ DIUBAH: Mengambil properti totalPembelian langsung yang sudah sah */}
+                const total = sPurchases.reduce((a, p) => a + (p.totalPembelian || 0), 0);
                 const jmlTrans = sPurchases.length;
                 
                 // Item terbanyak dibeli
                 const itemCounts: Record<string, number> = {};
+                
+                {/* 🛠️ DIUBAH: Iterasi dilakukan ke dalam sub-array p.detail untuk menghitung qty item */}
                 sPurchases.forEach(p => {
-                  itemCounts[p.barang] = (itemCounts[p.barang] || 0) + p.qty;
+                  if (p.detail) {
+                    p.detail.forEach(d => {
+                      itemCounts[d.namaBarang] = (itemCounts[d.namaBarang] || 0) + d.qty;
+                    });
+                  }
                 });
+
                 let topItem = '-';
                 let maxQty = 0;
                 Object.entries(itemCounts).forEach(([b, q]) => {
@@ -60,7 +69,9 @@ export default function LaporanSupplier() {
                     <td>{s.telp || '-'}</td>
                     <td>{jmlTrans}</td>
                     <td><strong>{fmt(total)}</strong></td>
-                    <td style={{ color: 'var(--text2)', fontSize: '12px' }}>{topItem}</td>
+                    <td style={{ color: 'var(--text2)', fontSize: '12px' }}>
+                      {topItem} {maxQty > 0 ? `(${maxQty} Pcs/Item)` : ''}
+                    </td>
                   </tr>
                 );
               })

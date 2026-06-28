@@ -65,7 +65,7 @@ export default function LaporanTransaksi() {
 
   return (
     <>
-      <div className="card" style={{ marginBottom: '20px', padding: '20px', display: 'flex', gap: '20px', background: 'var(--surface)' }}>
+    {/* <div className="card" style={{ marginBottom: '20px', padding: '20px', display: 'flex', gap: '20px', background: 'var(--surface)' }}>
         <div style={{ flex: 1 }}>
           <span style={{ fontSize: '12px', color: 'var(--text2)' }}>Total Pengeluaran (Beli)</span>
           <h2 style={{ margin: '4px 0 0 0', color: 'var(--blue)' }}>{fmt(totalBeli)}</h2>
@@ -78,7 +78,7 @@ export default function LaporanTransaksi() {
           <span style={{ fontSize: '12px', color: 'var(--text2)' }}>Estimasi Keuntungan (Laba)</span>
           <h2 style={{ margin: '4px 0 0 0', color: laba >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(laba)}</h2>
         </div>
-      </div>
+      </div> */}
 
       <div className="card">
         <div className="card-header">

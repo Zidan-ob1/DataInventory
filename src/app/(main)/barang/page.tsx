@@ -9,13 +9,15 @@ export default function MasterBarang() {
   const { barang, genId, addBarang, deleteBarang, updateBarang } = useStore();
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hbeli, setHbeli] = useState(''); 
+  const [hjual, setHjual] = useState(''); 
 
-  // Form State (Diperbarui: Menghapus hbeli, hjual, stok. Menambahkan keterangan)
+  // Form State
   const [nama, setNama] = useState('');
-  const [kategori, setKategori] = useState('Semen & Bahan Dasar'); // Berfungsi sebagai "Kelompok"
+  const [kategori, setKategori] = useState('Semen & Bahan Dasar'); 
   const [satuan, setSatuan] = useState('Sak');
   const [minstok, setMinstok] = useState('');
-  const [keterangan, setKeterangan] = useState(''); // State Baru
+  const [keterangan, setKeterangan] = useState(''); 
   const [editId, setEditId] = useState<string | null>(null);
 
   const filteredBarang = barang.filter(b => 
@@ -24,66 +26,69 @@ export default function MasterBarang() {
     b.kategori.toLowerCase().includes(search.toLowerCase())
   );
 
- // Ganti dari handleTambah ke handleSimpan
-const handleSimpan = () => {
-  if (!nama.trim()) {
-    toast('Nama barang wajib diisi!', true);
-    return;
-  }
-  
-  if (editId) {
-    // --- MODE EDIT / UPDATE ---
-    const updatedBarang: Barang = {
-      id: editId,
-      nama,
-      kategori,
-      satuan,
-      minstok: Number(minstok) || 0,
-      keterangan,
-      hbeli: 0,
-      hjual: 0,
-      stok: 0
-    };
+  const handleSimpan = () => {
+    if (!nama.trim()) {
+      toast('Nama barang wajib diisi!', true);
+      return;
+    }
 
-    // Panggil fungsi update dari context Anda
-    // Jika di context tidak ada fungsi update, ganti baris bawah ini dengan: 
-    // deleteBarang(editId); addBarang(updatedBarang);
-    updateBarang(updatedBarang); 
+    if (!hjual.trim() || Number(hjual) <= 0) {
+      toast('Harga jual toko wajib diisi dengan benar!', true);
+      return;
+    }
     
-    toast('✓ Barang berhasil diperbarui');
-  } else {
-    // --- MODE TAMBAH BARU ---
-    const newBarang: Barang = {
-      id: genId('B'),
-      nama,
-      kategori,
-      satuan,
-      minstok: Number(minstok) || 0,
-      keterangan,
-      hbeli: 0,
-      hjual: 0,
-      stok: 0
-    };
+    if (editId) {
+      // --- MODE EDIT / UPDATE ---
+      // 🛠️ MENCARI DATA STOK SEBELUMNYA AGAR TIDAK TER-RESET JADI 0
+      const barangLama = barang.find(b => b.id === editId);
+      const stokSekarang = barangLama ? barangLama.stok : 0;
 
-    addBarang(newBarang);
-    toast('✓ Barang berhasil ditambahkan');
-  }
-  
-  // Reset form & tutup modal
-  setNama(''); 
-  setMinstok('');
-  setKeterangan('');
-  setEditId(null); // Reset editId kembali ke null
-  setIsModalOpen(false);
-};
+      const updatedBarang: Barang = {
+        id: editId,
+        nama,
+        kategori,
+        satuan,
+        minstok: Number(minstok) || 0,
+        keterangan,
+        hbeli: Number(hbeli) || 0, // 🛠️ SINKRON: Mengambil nilai input riil
+        hjual: Number(hjual) || 0, // 🛠️ SINKRON: Mengambil nilai input riil
+        stok: stokSekarang         // 🛠️ SINKRON: Mempertahankan sisa stok lama di gudang
+      };
+
+      updateBarang(updatedBarang); 
+      toast('✓ Barang berhasil diperbarui');
+    } else {
+      // --- MODE TAMBAH BARU ---
+      const newBarang: Barang = {
+        id: genId('B'),
+        nama,
+        kategori,
+        satuan,
+        minstok: Number(minstok) || 0,
+        keterangan,
+        hbeli: Number(hbeli) || 0, // 🛠️ SINKRON: Mengambil nilai input riil
+        hjual: Number(hjual) || 0, // 🛠️ SINKRON: Mengambil nilai input riil
+        stok: 0
+      };
+
+      addBarang(newBarang);
+      toast('✓ Barang berhasil ditambahkan');
+    }
+    
+    resetForm();
+    setIsModalOpen(false);
+  };
 
   const handleEditClick = (b: Barang) => {
-    setEditId(b.id); // Set editId untuk menandai bahwa kita sedang dalam mode edit
+    setEditId(b.id); 
     setNama(b.nama);
     setKategori(b.kategori);
     setSatuan(b.satuan);
     setMinstok(b.minstok ? String(b.minstok) : '');
     setKeterangan(b.keterangan || '');
+    // 🛠️ PERBAIKAN: Isi form dengan harga lama saat tombol edit diklik
+    setHbeli(b.hbeli ? String(b.hbeli) : '');
+    setHjual(b.hjual ? String(b.hjual) : '');
     setIsModalOpen(true);
   };
 
@@ -100,13 +105,15 @@ const handleSimpan = () => {
     setSatuan('Sak');
     setMinstok('');
     setKeterangan('');
+    setHbeli('');
+    setHjual('');
     setEditId(null);
   };
 
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title">Daftar Barang</span>
+        <span className="card-title">Daftar Barang (Master)</span>
         <div className="card-actions">
           <div className="search-wrap">
             <i className="fa-solid fa-search"></i>
@@ -130,7 +137,8 @@ const handleSimpan = () => {
               <th>Nama Barang</th>
               <th>Kelompok</th> 
               <th>Satuan</th>
-              <th>Min. Stok</th>
+             
+              
               <th>Keterangan Tambahan</th> 
               <th></th>
             </tr>
@@ -143,8 +151,10 @@ const handleSimpan = () => {
                   <td><strong>{b.nama}</strong></td>
                   <td><span className="badge">{b.kategori}</span></td>
                   <td>{b.satuan}</td>
-                  <td style={{ color: 'var(--text3)' }}>{b.minstok}</td>
-                  <td>{b.keterangan || '-'}</td> 
+                  {/* 🛠️ TAMBAHAN VISUAL: Menampilkan nilai harga di tabel master agar mudah dipantau */}
+                 
+                  
+                  <td><span style={{ fontSize: '11px', color: 'var(--text2)' }}>{b.keterangan || '-'}</span></td> 
                   <td>
                     <button className="btn btn-icon btn-primary" onClick={() => handleEditClick(b)} title="Edit">
                       <i className="fa-solid fa-pen-to-square"></i>
@@ -157,7 +167,7 @@ const handleSimpan = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={7}> 
+                <td colSpan={9}> 
                   <div className="empty">
                     <i className="fa-solid fa-boxes-stacked"></i>
                     <p>Belum ada data barang</p>
@@ -170,9 +180,9 @@ const handleSimpan = () => {
       </div>
 
       <Modal 
-      isOpen={isModalOpen} 
-      onClose={() => { resetForm(); setIsModalOpen(false); }} 
-      title={editId ? "Edit Barang" : "Tambah Barang"}
+        isOpen={isModalOpen} 
+        onClose={() => { resetForm(); setIsModalOpen(false); }} 
+        title={editId ? "Edit Barang" : "Tambah Barang"}
       >
         <div className="form-group">
           <label className="form-label">Nama Barang <span style={{ color: 'red' }}>*</span></label>
@@ -207,7 +217,32 @@ const handleSimpan = () => {
           </div>
         </div>
 
-        {/* Form Baru: Keterangan Tambahan */}
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Harga Beli Standar (Rp)</label>
+            <input 
+              className="input" 
+              type="number" 
+              placeholder="Contoh: 50000" 
+              min="0" 
+              value={hbeli} 
+              onChange={e => setHbeli(e.target.value)} 
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Harga Jual Toko <span style={{ color: 'red' }}>*</span></label>
+            <input 
+              className="input" 
+              type="number" 
+              placeholder="Contoh: 65000" 
+              min="0" 
+              value={hjual} 
+              onChange={e => setHjual(e.target.value)} 
+              required
+            />
+          </div>
+        </div>
+
         <div className="form-group">
           <label className="form-label">Keterangan Tambahan</label>
           <textarea 

@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { db } from '@/lib/firebase'; // 🛠️ Pastikan path import mengarah ke file firebase.ts kamu
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 // Types
 export interface Barang {
@@ -28,8 +30,8 @@ export interface Supplier {
 export interface Pelanggan {
   id: string;
   namaPelanggan: string;
-  telp: string;
   contactPerson: string;
+  telp: string;
   alamatPelanggan: string;
   alamatPengiriman: string;
 }
@@ -95,208 +97,191 @@ interface StoreContextType extends StoreState {
   addPembelian: (pembelian: Pembelian) => void;
   addPenjualan: (penjualan: Penjualan) => void;
   addAdjustment: (adjustment: Adjustment) => void;
+  createPenjualan: (pelangganId: string, pelangganNama: string, items: DetailTransaksi[]) => void;
+  createPembelian: (supplierId: string, supplierNama: string, items: DetailTransaksi[]) => void;
   genId: (prefix: 'B' | 'S' | 'P' | 'PB' | 'FK' | 'ADJ') => string;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-const initialState: StoreState = {
-  barang: [
-    {id:'B001',nama:'Semen Portland 50kg',kategori:'Semen & Bahan Dasar',satuan:'Sak',hbeli:55000,hjual:70000,stok:120,minstok:20},
-    {id:'B002',nama:'Besi Beton Ø10mm',kategori:'Besi & Baja',satuan:'Batang',hbeli:45000,hjual:58000,stok:8,minstok:15},
-    {id:'B003',nama:'Pasir Beton',kategori:'Semen & Bahan Dasar',satuan:'Kg',hbeli:800,hjual:1200,stok:500,minstok:100},
-  ],
-  supplier: [
-    { id: 'S001', nama: 'PT Semen Nusantara', kontakOrang: 'Budi Wijaya', telp: '021-5551234', telpSeluler: '081122334455', email: 'sns@email.com', alamat: 'Jl. Industri No. 5, Jakarta' },
-  ],
-  pelanggan: [
-    { id: 'P001', namaPelanggan: 'Toko Bangun Sejahtera',telp: '08123456789', contactPerson: 'Haryanto', alamatPelanggan: 'Jl. Merdeka No. 3, Bogor', alamatPengiriman: 'Proyek Perumahan Griya Asri Blok C, Ciomas' },
-  ],
-  pembelian: [],
-  penjualan: [],
-  adjustment: []
-};
-
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<StoreState>(initialState);
-  const [counters, setCounters] = useState({ B: 3, S: 1, P: 1, PB: 0, FK: 0, ADJ: 0 });
+  // 🛠️ Menggunakan state individual untuk memudahkan sinkronisasi real-time Firestore
+  const [barang, setBarang] = useState<Barang[]>([]);
+  const [supplier, setSupplier] = useState<Supplier[]>([]);
+  const [pelanggan, setPelanggan] = useState<Pelanggan[]>([]);
+  const [pembelian, setPembelian] = useState<Pembelian[]>([]);
+  const [penjualan, setPenjualan] = useState<Penjualan[]>([]);
+  const [adjustment, setAdjustment] = useState<Adjustment[]>([]);
 
+  // 🛠️ REAL-TIME FETCHING: Mengambil data langsung dari Cloud Firestore secara otomatis
+  useEffect(() => {
+    const unsubBarang = onSnapshot(collection(db, 'barang'), (snap) => {
+      setBarang(snap.docs.map(d => d.data() as Barang));
+    });
+    const unsubSupplier = onSnapshot(collection(db, 'supplier'), (snap) => {
+      setSupplier(snap.docs.map(d => d.data() as Supplier));
+    });
+    const unsubPelanggan = onSnapshot(collection(db, 'pelanggan'), (snap) => {
+      setPelanggan(snap.docs.map(d => d.data() as Pelanggan));
+    });
+    const unsubPembelian = onSnapshot(collection(db, 'pembelian'), (snap) => {
+      setPembelian(snap.docs.map(d => d.data() as Pembelian));
+    });
+    const unsubPenjualan = onSnapshot(collection(db, 'penjualan'), (snap) => {
+      setPenjualan(snap.docs.map(d => d.data() as Penjualan));
+    });
+    const unsubAdjustment = onSnapshot(collection(db, 'adjustment'), (snap) => {
+      setAdjustment(snap.docs.map(d => d.data() as Adjustment));
+    });
+
+    return () => {
+      unsubBarang(); unsubSupplier(); unsubPelanggan();
+      unsubPembelian(); unsubPenjualan(); unsubAdjustment();
+    };
+  }, []);
+
+  // 🛠️ AUTO ID GENERATOR BERDASARKAN JUMLAH DATA CLOUD RIIL
   const genId = (prefix: 'B' | 'S' | 'P' | 'PB' | 'FK' | 'ADJ') => {
-    const nextNum = counters[prefix] + 1;
-    setCounters(prev => ({ ...prev, [prefix]: nextNum }));
-    return prefix + String(nextNum).padStart(3, '0');
+    let length = 0;
+    if (prefix === 'B') length = barang.length;
+    else if (prefix === 'S') length = supplier.length;
+    else if (prefix === 'P') length = pelanggan.length;
+    else if (prefix === 'PB') length = pembelian.length;
+    else if (prefix === 'FK') length = penjualan.length;
+    else if (prefix === 'ADJ') length = adjustment.length;
+
+    return prefix + String(length + 1).padStart(3, '0');
   };
 
   // ==================== MASTER BARANG ====================
-  // REVISI: Tambah barang otomatis memicu Transaksi Pembelian dummy awal
-  const addBarang = (baru: Barang) => {
-    setState(prev => {
-      const notaId = 'PB' + String(counters.PB + 1).padStart(3, '0');
-      setCounters(c => ({ ...c, PB: c.PB + 1 }));
-
-      const detailBaru: DetailTransaksi = {
-        barangId: baru.id,
-        kodeBarang: baru.id,
-        namaBarang: baru.nama,
-        qty: baru.stok > 0 ? baru.stok : 10, // Default ambil stok awal master atau 10
-        hargaSatuan: baru.hbeli,
-        subtotal: (baru.stok > 0 ? baru.stok : 10) * baru.hbeli
-      };
-
-      const notaPembelian: Pembelian = {
-        id: notaId,
-        tgl: new Date().toISOString().slice(0, 10),
-        supplierId: prev.supplier[0]?.id || 'S001',
-        supplierNama: prev.supplier[0]?.nama || 'PT Semen Nusantara',
-        detail: [detailBaru],
-        totalPembelian: detailBaru.subtotal,
-        status: 'Selesai'
-      };
-
-      return {
-        ...prev,
-        barang: [...prev.barang, baru],
-        pembelian: [...prev.pembelian, notaPembelian]
-      };
-    });
+  const addBarang = async (baru: Barang) => {
+    await setDoc(doc(db, 'barang', baru.id), baru);
   };
 
-  const deleteBarang = (id: string) => setState(prev => ({ ...prev, barang: prev.barang.filter(b => b.id !== id) }));
-  const updateBarang = (barangBaru: Barang) => {
-    setState(prev => ({ ...prev, barang: prev.barang.map(b => b.id === barangBaru.id ? barangBaru : b) }));
+  const updateBarang = async (barangBaru: Barang) => {
+    await setDoc(doc(db, 'barang', barangBaru.id), barangBaru);
+  };
+
+  const deleteBarang = async (id: string) => {
+    await deleteDoc(doc(db, 'barang', id));
   };
   
   // ==================== MASTER SUPPLIER ====================
-  // REVISI: Tambah supplier otomatis memicu Transaksi Pembelian barang pertama
-  const addSupplier = (baru: Supplier) => {
-    setState(prev => {
-      const notaId = 'PB' + String(counters.PB + 1).padStart(3, '0');
-      setCounters(c => ({ ...c, PB: c.PB + 1 }));
-
-      const barangAcuan = prev.barang[0] || { id: 'B001', nama: 'Semen Portland 50kg', hbeli: 55000 };
-      
-      const detailBaru: DetailTransaksi = {
-        barangId: barangAcuan.id,
-        kodeBarang: barangAcuan.id,
-        namaBarang: barangAcuan.nama,
-        qty: 25, // Kuantitas default pasokan supplier baru
-        hargaSatuan: barangAcuan.hbeli,
-        subtotal: 25 * barangAcuan.hbeli
-      };
-
-      const notaPembelian: Pembelian = {
-        id: notaId,
-        tgl: new Date().toISOString().slice(0, 10),
-        supplierId: baru.id,
-        supplierNama: baru.nama,
-        detail: [detailBaru],
-        totalPembelian: detailBaru.subtotal,
-        status: 'Selesai'
-      };
-
-      // Tambah stok barang acuan karena ada pembelian masuk
-      const updatedBarang = prev.barang.map(b => 
-        b.id === barangAcuan.id ? { ...b, stok: b.stok + 25 } : b
-      );
-
-      return {
-        ...prev,
-        supplier: [...prev.supplier, baru],
-        barang: updatedBarang,
-        pembelian: [...prev.pembelian, notaPembelian]
-      };
-    });
+  const addSupplier = async (input: Omit<Supplier, 'id'>) => {
+    const id = genId('S');
+    const data: Supplier = { ...input, id };
+    await setDoc(doc(db, 'supplier', id), data);
   };
 
-  const deleteSupplier = (id: string) => setState(prev => ({ ...prev, supplier: prev.supplier.filter(s => s.id !== id) }));
-  const updateSupplier = (supplierBaru: Supplier) => {
-    setState(prev => ({ ...prev, supplier: prev.supplier.map(s => s.id === supplierBaru.id ? supplierBaru : s) }));
+  const deleteSupplier = async (id: string) => {
+    await deleteDoc(doc(db, 'supplier', id));
+  };
+
+  const updateSupplier = async (supplierBaru: Supplier) => {
+    await setDoc(doc(db, 'supplier', supplierBaru.id), supplierBaru);
   };
   
   // ==================== MASTER PELANGGAN ====================
-  // REVISI: Tambah pelanggan otomatis memicu Transaksi Penjualan (Faktur) barang pertama
-  const addPelanggan = (baru: Pelanggan) => {
-    setState(prev => {
-      const notaId = 'FK' + String(counters.FK + 1).padStart(3, '0');
-      setCounters(c => ({ ...c, FK: c.FK + 1 }));
-
-      const barangAcuan = prev.barang[0] || { id: 'B001', nama: 'Semen Portland 50kg', hjual: 70000, stok: 100 };
-      
-      const detailBaru: DetailTransaksi = {
-        barangId: barangAcuan.id,
-        kodeBarang: barangAcuan.id,
-        namaBarang: barangAcuan.nama,
-        qty: 5, // Kuantitas belanja default awal customer
-        hargaSatuan: barangAcuan.hjual,
-        subtotal: 5 * barangAcuan.hjual
-      };
-
-      const notaPenjualan: Penjualan = {
-        id: notaId,
-        tgl: new Date().toISOString().slice(0, 10),
-        pelangganId: baru.id,
-        pelangganNama: baru.namaPelanggan,
-        detail: [detailBaru],
-        totalPenjualan: detailBaru.subtotal,
-        status: 'Lunas'
-      };
-
-      // Kurangi stok barang karena dibeli customer
-      const updatedBarang = prev.barang.map(b => 
-        b.id === barangAcuan.id ? { ...b, stok: Math.max(0, b.stok - 5) } : b
-      );
-
-      return {
-        ...prev,
-        pelanggan: [...prev.pelanggan, baru],
-        barang: updatedBarang,
-        penjualan: [...prev.penjualan, notaPenjualan]
-      };
-    });
+  const addPelanggan = async (input: Omit<Pelanggan, 'id'>) => {
+    const id = genId('P');
+    const data: Pelanggan = { ...input, id };
+    await setDoc(doc(db, 'pelanggan', id), data);
   };
 
-  const deletePelanggan = (id: string) => setState(prev => ({ ...prev, pelanggan: prev.pelanggan.filter(p => p.id !== id) }));
-  const updatePelanggan = (pelangganBaru: Pelanggan) => {
-    setState(prev => ({ ...prev, pelanggan: prev.pelanggan.map(p => p.id === pelangganBaru.id ? pelangganBaru : p) }));
+  const deletePelanggan = async (id: string) => {
+    await deleteDoc(doc(db, 'pelanggan', id));
+  };
+
+  const updatePelanggan = async (pelangganBaru: Pelanggan) => {
+    await setDoc(doc(db, 'pelanggan', pelangganBaru.id), pelangganBaru);
+  };
+
+  // ==================== LOGIC TRANSAKSI BERBASIS CLOUD ====================
+  
+  const createPembelian = async (supplierId: string, supplierNama: string, items: DetailTransaksi[]) => {
+    const notaId = genId('PB');
+    const totalNota = items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.hargaSatuan)), 0);
+
+    const newPembelian: Pembelian = {
+      id: notaId,
+      tgl: new Date().toLocaleDateString('id-ID'),
+      supplierId,
+      supplierNama,
+      detail: items,
+      totalPembelian: totalNota,
+      status: 'Selesai'
+    };
+
+    // 1. Simpan Nota Pembelian
+    await setDoc(doc(db, 'pembelian', notaId), newPembelian);
+
+    // 2. Mutasi Tambah Stok & Update Harga Beli Akhir ke Cloud
+    for (const item of items) {
+      const b = barang.find(x => x.id === item.barangId || x.id === item.kodeBarang);
+      if (b) {
+        await setDoc(doc(db, 'barang', b.id), {
+          ...b,
+          stok: b.stok + Number(item.qty),
+          hbeli: Number(item.hargaSatuan)
+        });
+      }
+    }
+  };
+
+  const createPenjualan = async (pelangganId: string, pelangganNama: string, items: DetailTransaksi[]) => {
+    const fakturId = genId('FK');
+    const totalNota = items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.hargaSatuan)), 0);
+
+    const newPenjualan: Penjualan = {
+      id: fakturId,
+      tgl: new Date().toLocaleDateString('id-ID'),
+      pelangganId,
+      pelangganNama,
+      detail: items,
+      totalPenjualan: totalNota,
+      status: 'Selesai'
+    };
+
+    // 1. Simpan Nota Penjualan
+    await setDoc(doc(db, 'penjualan', fakturId), newPenjualan);
+
+    // 2. Mutasi Kurang Stok di Cloud
+    for (const item of items) {
+      const b = barang.find(x => x.id === item.barangId || x.id === item.kodeBarang);
+      if (b) {
+        await setDoc(doc(db, 'barang', b.id), {
+          ...b,
+          stok: b.stok - Number(item.qty)
+        });
+      }
+    }
   };
   
-  // ==================== TRANSAKSI DIRECT (Kini di-trigger otomatis) ====================
-  const addPembelian = (pembelian: Pembelian) => {
-    setState(prev => {
-      const updatedBarang = prev.barang.map(b => {
-        const itemMatch = pembelian.detail.find(d => d.barangId === b.id);
-        return itemMatch ? { ...b, stok: b.stok + itemMatch.qty } : b;
-      });
-      return { ...prev, barang: updatedBarang, pembelian: [...prev.pembelian, pembelian] };
-    });
+  // ==================== ALUR COMPATIBILITY BACKGROUND DEPRECATED ====================
+  const addPembelian = async (pembelian: Pembelian) => {
+    await setDoc(doc(db, 'pembelian', pembelian.id), pembelian);
   };
 
-  const addPenjualan = (penjualan: Penjualan) => {
-    setState(prev => {
-      const updatedBarang = prev.barang.map(b => {
-        const itemMatch = penjualan.detail.find(d => d.barangId === b.id);
-        return itemMatch ? { ...b, stok: b.stok - itemMatch.qty } : b;
-      });
-      return { ...prev, barang: updatedBarang, penjualan: [...prev.penjualan, penjualan] };
-    });
+  const addPenjualan = async (penjualan: Penjualan) => {
+    await setDoc(doc(db, 'penjualan', penjualan.id), penjualan);
   };
 
-  const addAdjustment = (adjustment: Adjustment) => {
-    setState(prev => {
-      const updatedBarang = prev.barang.map(b => 
-        b.id === adjustment.barangId ? { ...b, stok: b.stok + adjustment.qty } : b
-      );
-      return { ...prev, barang: updatedBarang, adjustment: [...prev.adjustment, adjustment] };
-    });
+  const addAdjustment = async (adj: Adjustment) => {
+    await setDoc(doc(db, 'adjustment', adj.id), adj);
+    const b = barang.find(x => x.id === adj.barangId);
+    if (b) {
+      await setDoc(doc(db, 'barang', b.id), { ...b, stok: b.stok + adj.qty });
+    }
   };
 
   return (
     <StoreContext.Provider value={{
-      ...state,
+      barang, supplier, pelanggan, pembelian, penjualan, adjustment,
       addBarang, deleteBarang, updateBarang,
       addSupplier, deleteSupplier, updateSupplier,
       addPelanggan, deletePelanggan, updatePelanggan,
       addPembelian, addPenjualan, addAdjustment,
+      createPembelian, createPenjualan,
       genId
     }}>
       {children}

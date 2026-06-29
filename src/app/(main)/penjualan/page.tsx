@@ -21,38 +21,105 @@ export default function TransaksiPenjualan() {
 
   // Fungsi cetak struk nota yang dipicu dari dalam pop-up modal
   const handleCetakNota = (pj: Penjualan) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    
+    let iframe = document.getElementById('print-iframe') as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'print-iframe';
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0px';
+      iframe.style.height = '0px';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+    }
+   const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) return;
     
     let htmlContent = `
-      <html>
+    <html>
       <head>
-        <title>Cetak Faktur Penjualan ${pj.id}</title>
+        <title>Faktur Penjualan ${pj.id}</title>
         <style>
-          body { font-family: monospace; padding: 20px; color: #000; }
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+          body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            padding: 30px; 
+            color: #1a1a1a; 
+            background: #fff;
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #f4f4f5;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+          }
+          .brand-title { margin: 0; font-size: 22px; font-weight: 700; color: #18181b; letter-spacing: -0.5px; }
+          .brand-sub { margin: 4px 0 0 0; font-size: 13px; color: #71717a; }
+          .invoice-badge {
+            background: #e1f5fe; color: #0288d1;
+            padding: 6px 12px; borderRadius: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+          }
+          .meta-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+            font-size: 13px; margin-bottom: 30px; line-height: 1.5;
+          }
+          .meta-label { color: #71717a; font-weight: 500; }
+          .meta-value { color: #18181b; font-weight: 600; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border-bottom: 1px solid #000; padding: 6px 4px; text-align: left; font-size: 13px; }
+          th { 
+            background: #f8f8f9; color: #71717a; font-size: 12px; 
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 12px 8px; text-align: left; border-bottom: 1px solid #e4e4e7;
+          }
+          td { padding: 14px 8px; font-size: 13px; color: #27272a; border-bottom: 1px solid #f4f4f5; }
           .text-right { text-align: right; }
-          hr { border: none; border-top: 1px dashed #000; margin: 15px 0; }
-          .header { text-align: center; margin-bottom: 20px; }
+          .item-name { font-weight: 600; color: #18181b; margin-bottom: 2px; }
+          .item-code { font-size: 11px; color: #a1a1aa; font-family: monospace; }
+          .grand-total-container {
+            margin-top: 24px; padding: 16px; background: #f8f8f9; 
+            border-radius: 8px; display: flex; justify-content: space-between; align-items: center;
+          }
+          .total-label { font-size: 14px; font-weight: 600; color: #71717a; }
+          .total-value { font-size: 18px; font-weight: 700; color: #18181b; }
+          .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #a1a1aa; font-weight: 500; }
+          @media print {
+            body { padding: 0; margin: 0; max-width: 100%; }
+            .grand-total-container { background: #f8f8f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h3 style="margin: 0; padding: 0;">FAKTUR PENJUALAN</h3>
-          <p style="margin: 4px 0 0 0; font-size: 12px;">InvManager System</p>
+        <div class="header-container">
+          <div>
+            <h2 class="brand-title">FAKTUR PENJUALAN</h2>
+            <p class="brand-sub">InvManager System v1.0</p>
+          </div>
+          <div class="invoice-badge">INVOICE</div>
         </div>
-        <p>
-          <b>No. Faktur :</b> ${pj.id}<br/>
-          <b>Tanggal    :</b> ${pj.tgl}<br/>
-          <b>Pelanggan  :</b> ${pj.pelangganNama}
-        </p>
-        <hr/>
+        
+        <div class="meta-grid">
+          <div>
+            <span class="meta-label">No. Faktur</span><br/>
+            <span class="meta-value" style="font-family: monospace;">${pj.id}</span>
+          </div>
+          <div>
+            <span class="meta-label">Tanggal Transaksi</span><br/>
+            <span class="meta-value">${pj.tgl}</span>
+          </div>
+          <div style="grid-column: span 2;">
+            <span class="meta-label">Pelanggan</span><br/>
+            <span class="meta-value">${pj.pelangganNama}</span>
+          </div>
+        </div>
+
         <table>
           <thead>
             <tr>
-              <th>Kode</th>
-              <th>Nama Barang</th>
+              <th>Detail Barang</th>
               <th class="text-right">Qty</th>
               <th class="text-right">Harga</th>
               <th class="text-right">Subtotal</th>
@@ -61,27 +128,38 @@ export default function TransaksiPenjualan() {
           <tbody>
             ${pj.detail.map(d => `
               <tr>
-                <td>${d.kodeBarang}</td>
-                <td>${d.namaBarang}</td>
-                <td class="text-right">${d.qty}</td>
-                <td class="text-right">${d.hargaSatuan.toLocaleString('id-ID')}</td>
-                <td class="text-right">${d.subtotal.toLocaleString('id-ID')}</td>
+                <td>
+                  <div class="item-name">${d.namaBarang}</div>
+                  <div class="item-code">${d.kodeBarang}</div>
+                </td>
+                <td class="text-right" style="font-weight: 500;">${d.qty}</td>
+                <td class="text-right" style="color: #52525b;">${Math.round(d.hargaSatuan).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="font-weight: 600; color: #18181b;">${Math.round(d.subtotal).toLocaleString('id-ID')}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-        <hr/>
-        <h3 class="text-right" style="margin-top: 10px;">Total Penjualan: Rp ${pj.totalPenjualan.toLocaleString('id-ID')}</h3>
-        <p style="text-align: center; margin-top: 40px; font-size: 11px;">-- Terima Kasih Atas Kunjungan Anda --</p>
-        <script>
-          window.print();
-          window.close();
-        </script>
+
+        <div class="grand-total-container">
+          <span class="total-label">Grand Total Tagihan</span>
+          <span class="total-value">Rp ${Math.round(pj.totalPenjualan).toLocaleString('id-ID')}</span>
+        </div>
+
+        <div class="footer">
+          <p style="margin: 0; letter-spacing: 0.5px;">-- Terima Kasih Atas Kepercayaan Anda --</p>
+        </div>
       </body>
       </html>
     `;
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+   setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 250);
+
   };
 
   return (
